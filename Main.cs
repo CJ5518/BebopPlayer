@@ -121,7 +121,7 @@ public class MainForm : Form {
 		//Set up the music player
 		musicPlayer = new MusicPlayer();
 		musicPlayer.setOnPlaybackStopped(onPlaybackStopped);
-		musicPlayer.setVolume((float)volumeSlider.Value / (float)volumeSlider.Maximum);
+		setVolumeBasedOnSliderValue();
 		loadPlaylistByIdx(0);
 		playNextSong();
 
@@ -254,6 +254,10 @@ public class MainForm : Form {
 	}
 
 	private void onVolumeSliderValueChanged(object sender, EventArgs eventArgs) {
+		setVolumeBasedOnSliderValue();
+	}
+
+	private void setVolumeBasedOnSliderValue() {
 		float newValue = MathF.Pow(volumeSlider.Value / (float)volumeSlider.Maximum, 1.5f);
 		musicPlayer.setVolume(newValue);
 	}
