@@ -4,6 +4,8 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -16,12 +18,18 @@ public class MainForm : Form {
 	private const int FontSize = 11;
 	private const String FontName = "Segoe UI";
 
+	//The number of milliseconds you have to double click the delete button
+	const int deleteButtonDelayMillis = 1000;
+
 	private Font font;
 
 	//Controls
 	private BebopButton playButton;
 	private BebopButton pauseButton;
 	private BebopButton skipButton;
+	private BebopButton deleteButton;
+
+	private Label deleteLabel;
 	private ComboBox playlistComboBox;
 	private TrackBar volumeSlider;
 	private Label statusLabel;
@@ -68,14 +76,30 @@ public class MainForm : Form {
 		//Buttons and other controls
 
 		font = new Font(new FontFamily(FontName), FontSize);
+		Font slightlySmallerFont = new Font(new FontFamily(FontName), FontSize - 1);
 
 		playButton = new BebopButton(new Point(0,0), "Play", font);
 		pauseButton = new BebopButton(new Point(BebopButton.ButtonSize * 1, 0), "Pause", font);
 		skipButton = new BebopButton(new Point(BebopButton.ButtonSize * 2, 0), "Skip", font);
 
+		//Delete button
+		deleteButton = new BebopButton(new Point(BebopButton.ButtonSize * 3, 0), "Delete File", slightlySmallerFont);
+		deleteButton.Size = deleteButton.Size / 2;
+		deleteButton.Location =
+			new Point(deleteButton.Location.X, deleteButton.Location.Y + deleteButton.Size.Width / 2);
+
+		//Add click handlers
 		playButton.Click += onPlayButtonClick;
 		pauseButton.Click += onPauseButtonClick;
 		skipButton.Click += onSkipButtonClick;
+		deleteButton.Click += onDeleteButtonClick;
+
+		//Delete label
+		deleteLabel = new Label();
+		deleteLabel.Location = new Point(BebopButton.ButtonSize * 3, BebopButton.ButtonSize - 22);
+		deleteLabel.Text = "";
+		deleteLabel.Size = new Size(1000, 20);
+		deleteLabel.Font = slightlySmallerFont;
 
 		//playlist list box
 		playlistComboBox = new ComboBox();
@@ -116,6 +140,8 @@ public class MainForm : Form {
 		Controls.Add(playButton);
 		Controls.Add(pauseButton);
 		Controls.Add(skipButton);
+		Controls.Add(deleteButton);
+		Controls.Add(deleteLabel);
 		Controls.Add(playlistComboBox);
 		Controls.Add(volumeSlider);
 		Controls.Add(statusLabel);
@@ -245,6 +271,48 @@ public class MainForm : Form {
 	private void onSkipButtonClick(object sender, EventArgs eventArgs) {
 		playNextSong();
 	}
+
+	string fileToDelete;
+	bool waitingForPermission = false;
+	CancellationTokenSource cancellationToken = new CancellationTokenSource();
+	private void onDeleteButtonClick(object sender, EventArgs eventArgs) {
+		//Move focus off of this control
+		playButton.Focus();
+		//If we haven't clicked yet
+		if (!waitingForPermission) {
+			waitingForPermission = true;
+			fileToDelete = currentSongFilename;
+			deleteLabel.Text = "Are you sure?";
+
+			//stopwatch.Restart();
+			cancellationToken.Cancel();
+			cancellationToken = new CancellationTokenSource();
+			Task.Delay(deleteButtonDelayMillis).ContinueWith(t => resetDeleteButtonState(cancellationToken));
+			
+		}
+		else { //If we already clicked once
+			//Make sure the song hasn't changed
+			if (fileToDelete == currentSongFilename) {
+				//Delete the file
+				if (File.Exists(fileToDelete))
+					File.Delete(fileToDelete);
+
+				//Just make sure the reset function doesn't trigger at a weird time
+				cancellationToken.Cancel();
+				//And then trigger it
+				resetDeleteButtonState(null);
+			}
+		}
+	}
+
+	private void resetDeleteButtonState(CancellationTokenSource token) {
+		if (token != null && token.IsCancellationRequested) return;
+		waitingForPermission = false;
+		deleteLabel.Text = "";
+		fileToDelete = "";
+	}
+
+	//When the song ends
 	private void onPlaybackStopped(object sender, EventArgs eventArgs) {
 		if (!weStoppedTheSong)
 			playNextSong();
