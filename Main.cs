@@ -55,10 +55,8 @@ public class MainForm : Form {
 	//Playlist MUST end in a slash
 #if DEBUG
 	const string playlistFolder = "C:\\Users\\carso\\Documents\\ProgrammingProjects\\C#\\BebopPlayerV3\\playlists\\";
-	const string iconFilePath = "C:\\Users\\carso\\Documents\\ProgrammingProjects\\C#\\BebopPlayerV3\\Untitled.ico";
 #else
 	const string playlistFolder = "./playlists/";
-	const string iconFilePath = "./Untitled.ico";
 #endif
 	bool weStoppedTheSong = false;
 
@@ -70,7 +68,8 @@ public class MainForm : Form {
 		//Things for this window
 		this.Size = new Size(600, 175);
 		this.Text = "Bebop Music Player 3.0";
-		this.Icon = new Icon(iconFilePath);
+		this.Icon = BebopPlayerV3.Properties.Resources.Icon;
+		
 		BackColor = Color.FromArgb(171, 171, 171);
 		
 		//Buttons and other controls
