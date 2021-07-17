@@ -19,7 +19,7 @@ public class MainForm : Form {
 	private const String FontName = "Segoe UI";
 
 	//The number of milliseconds you have to double click the delete button
-	const int deleteButtonDelayMillis = 1000;
+	const int deleteButtonDelayMillis = 500;
 
 	private Font font;
 
@@ -81,24 +81,10 @@ public class MainForm : Form {
 		pauseButton = new BebopButton(new Point(BebopButton.ButtonSize * 1, 0), "Pause", font);
 		skipButton = new BebopButton(new Point(BebopButton.ButtonSize * 2, 0), "Skip", font);
 
-		//Delete button
-		deleteButton = new BebopButton(new Point(BebopButton.ButtonSize * 3, 0), "Delete File", slightlySmallerFont);
-		deleteButton.Size = deleteButton.Size / 2;
-		deleteButton.Location =
-			new Point(deleteButton.Location.X, deleteButton.Location.Y + deleteButton.Size.Width / 2);
-
 		//Add click handlers
 		playButton.Click += onPlayButtonClick;
 		pauseButton.Click += onPauseButtonClick;
 		skipButton.Click += onSkipButtonClick;
-		deleteButton.Click += onDeleteButtonClick;
-
-		//Delete label
-		deleteLabel = new Label();
-		deleteLabel.Location = new Point(BebopButton.ButtonSize * 3, BebopButton.ButtonSize - 22);
-		deleteLabel.Text = "";
-		deleteLabel.Size = new Size(1000, 20);
-		deleteLabel.Font = slightlySmallerFont;
 
 		//playlist list box
 		playlistComboBox = new ComboBox();
@@ -133,9 +119,28 @@ public class MainForm : Form {
 			playlistComboBox.Location.X + playlistComboBox.Size.Width,
 			playlistComboBox.Location.Y
 		);
+		shuffleCheckBox.Size = new Size(15, 15);
 		shuffleCheckBox.Checked = true;
 
-		
+		//Delete button
+		deleteButton = new BebopButton(playlistComboBox.Location, "Delete File", slightlySmallerFont);
+		deleteButton.Size = deleteButton.Size / 2;
+		deleteButton.Location =
+			new Point(deleteButton.Location.X + (playlistComboBox.Width / 4), BebopButton.ButtonSize / 4);
+
+		deleteButton.Click += onDeleteButtonClick;
+
+		//Delete label
+		deleteLabel = new Label();
+		deleteLabel.Location = new Point(
+			deleteButton.Location.X,
+			deleteButton.Location.Y + deleteButton.Size.Height
+		);
+		deleteLabel.Text = "";
+		deleteLabel.Size = new Size(1000, 20);
+		deleteLabel.Font = slightlySmallerFont;
+
+
 		Controls.Add(playButton);
 		Controls.Add(pauseButton);
 		Controls.Add(skipButton);
@@ -300,6 +305,8 @@ public class MainForm : Form {
 				cancellationToken.Cancel();
 				//And then trigger it
 				resetDeleteButtonState(null);
+				//And then skip the now deleted song
+				playNextSong();
 			}
 		}
 	}
