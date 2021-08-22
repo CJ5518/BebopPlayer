@@ -71,7 +71,7 @@ public class MainForm : Form {
 		
 		//Things for this window
 		this.Size = new Size(600, 175);
-		this.Text = "Bebop Music Player v3.3";
+		this.Text = "Bebop Music Player v3.3.1";
 		this.Icon = BebopPlayerV3.Properties.Resources.Icon;
 		
 		BackColor = Color.FromArgb(171, 171, 171);
