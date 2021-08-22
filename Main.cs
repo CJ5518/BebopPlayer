@@ -21,6 +21,8 @@ public class MainForm : Form {
 
 	//The number of milliseconds you have to double click the delete button
 	const int deleteButtonDelayMillis = 500;
+	//The minimum number of milliseconds between song skips with the skip hotkey
+	const long skipButtonInterval = 50;
 
 	private Font font;
 
@@ -71,7 +73,7 @@ public class MainForm : Form {
 		
 		//Things for this window
 		this.Size = new Size(600, 175);
-		this.Text = "Bebop Music Player v3.3.1";
+		this.Text = "Bebop Music Player v3.3.2";
 		this.Icon = BebopPlayerV3.Properties.Resources.Icon;
 		
 		BackColor = Color.FromArgb(171, 171, 171);
@@ -205,8 +207,14 @@ public class MainForm : Form {
 			musicPlayer.resume();
 		}
 	}
+
+	long lastSkipMilliseconds = -1;
 	private void HandleSkipHotkey() {
-		playNextSong();
+		long currentMillis = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+		if (currentMillis - lastSkipMilliseconds >= skipButtonInterval) {
+			playNextSong();
+			lastSkipMilliseconds = currentMillis;
+		}
 	}
 
 	//The amount the volume slider changes when you press a hotkey
