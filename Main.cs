@@ -6,6 +6,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
@@ -61,6 +62,9 @@ public class MainForm : Form {
 	bool weStoppedTheSong = false;
 
 	public MainForm() {
+#if DEBUG
+		AllocConsole();
+#endif
 		//Set up lua state
 		state = new Lua();
 		state.LoadCLRPackage();
@@ -246,8 +250,9 @@ public class MainForm : Form {
 	}
 	private void playNextSong() {
 		playlistCounter++;
-		if (playlistCounter >= playlist.Length) {
+		if (playlistCounter > playlist.Length - 1) {
 			loadPlaylistByFilename(currentPlaylistFile);
+			playlistCounter++;
 		}
 		//Weird bit to handle the fact that the very first song does not get stopped at all
 		//Messes up the whole thing with the weStoppedTheSongVariable
@@ -256,6 +261,7 @@ public class MainForm : Form {
 		musicPlayer.play(currentSongFilename);
 		updateStatusLabel();
 	}
+
 	private string playlistNameToFilename(string name) {
 		return playlistFolder + name + ".lua";
 	}
@@ -346,4 +352,10 @@ public class MainForm : Form {
 		Application.Run(new MainForm());
 		
 	}
+
+#if DEBUG
+	[DllImport("kernel32.dll", SetLastError = true)]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	static extern bool AllocConsole();
+#endif
 }
