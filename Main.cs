@@ -20,7 +20,7 @@ public class MainForm : Form {
 	private const String FontName = "Segoe UI";
 
 	//The number of milliseconds you have to double click the delete button
-	const int deleteButtonDelayMillis = 500;
+	const int deleteButtonDelayMillis = 250;
 	//The minimum number of milliseconds between song skips with the skip hotkey
 	const long skipButtonInterval = 50;
 
@@ -33,7 +33,7 @@ public class MainForm : Form {
 	private BebopButton deleteButton;
 
 	private Label deleteLabel;
-	private ComboBox playlistComboBox;
+	private ComboBox[] playlistComboBoxes;
 	private TrackBar volumeSlider;
 	private Label statusLabel;
 	private CheckBox shuffleCheckBox;
@@ -49,12 +49,12 @@ public class MainForm : Form {
 
 	private Random rand = new Random();
 
-	Lua state;
+	Lua luaState;
+	LuaTable playlistTable;
 
 	//The currently playing song
 	int playlistCounter = -1;
 	private String[] playlist;
-	private string currentPlaylistFile;
 	//Playlist MUST end in a slash
 #if DEBUG
 	const string playlistFolder = "C:\\Users\\carso\\Documents\\ProgrammingProjects\\C#\\BebopPlayerV3\\playlists\\";
@@ -68,8 +68,8 @@ public class MainForm : Form {
 		AllocConsole();
 #endif
 		//Set up lua state
-		state = new Lua();
-		state.LoadCLRPackage();
+		luaState = new Lua();
+		luaState.LoadCLRPackage();
 		
 		//Things for this window
 		this.Size = new Size(600, 175);
@@ -92,16 +92,20 @@ public class MainForm : Form {
 		pauseButton.Click += onPauseButtonClick;
 		skipButton.Click += onSkipButtonClick;
 
-		//playlist list box
-		playlistComboBox = new ComboBox();
-		//Iterate over lua files
-		playlistComboBox.Items.AddRange(Directory.GetFiles(playlistFolder));
-		for (int q = 0; q < playlistComboBox.Items.Count; q++) {
-			playlistComboBox.Items[q] = Path.GetFileNameWithoutExtension(playlistComboBox.Items[q].ToString());
+		//Create the combo boxes
+		playlistComboBoxes = new ComboBox[3];
+		for (int q = 0; q < 3; q++) {
+			playlistComboBoxes[q] = new ComboBox();
+			playlistComboBoxes[q].Location = new Point(BebopButton.ButtonSize * 3, q * (playlistComboBoxes[q].Size.Height + 3));
+			playlistComboBoxes[q].Size = new Size(175, playlistComboBoxes[q].Size.Height);
+			this.Controls.Add(playlistComboBoxes[q]);
 		}
-
-		playlistComboBox.Location = new Point(BebopButton.ButtonSize * 3, 0);
-		playlistComboBox.SelectedValueChanged += onPlaylistComboBoxSelectionChanged;
+		playlistComboBoxes[0].SelectedIndexChanged += new EventHandler(playlistComboxBoxSelectionId0);
+		playlistComboBoxes[1].SelectedIndexChanged += new EventHandler(playlistComboxBoxSelectionId1);
+		playlistComboBoxes[2].SelectedIndexChanged += new EventHandler(playlistComboxBoxSelectionId2);
+		//Set up the main combo box
+		playlistTable = luaState.DoFile(playlistFolder + "main.lua")[0] as LuaTable;
+		populateComboBox(playlistTable, playlistComboBoxes[0]);
 
 		//Volume slider
 		volumeSlider = new TrackBar();
@@ -122,17 +126,17 @@ public class MainForm : Form {
 		//Shuffle check box
 		shuffleCheckBox = new CheckBox();
 		shuffleCheckBox.Location = new Point(
-			playlistComboBox.Location.X + playlistComboBox.Size.Width,
-			playlistComboBox.Location.Y
+			playlistComboBoxes[0].Location.X + playlistComboBoxes[0].Size.Width,
+			playlistComboBoxes[0].Location.Y
 		);
 		shuffleCheckBox.Size = new Size(15, 15);
 		shuffleCheckBox.Checked = true;
 
 		//Delete button
-		deleteButton = new BebopButton(playlistComboBox.Location, "Delete File", slightlySmallerFont);
+		deleteButton = new BebopButton(playlistComboBoxes[0].Location, "Delete File", slightlySmallerFont);
 		deleteButton.Size = deleteButton.Size / 2;
 		deleteButton.Location =
-			new Point(deleteButton.Location.X + (playlistComboBox.Width / 4), BebopButton.ButtonSize / 4);
+			new Point(deleteButton.Location.X + (playlistComboBoxes[0].Width * 5 / 4), BebopButton.ButtonSize / 6);
 
 		deleteButton.Click += onDeleteButtonClick;
 
@@ -152,7 +156,6 @@ public class MainForm : Form {
 		Controls.Add(skipButton);
 		Controls.Add(deleteButton);
 		Controls.Add(deleteLabel);
-		Controls.Add(playlistComboBox);
 		Controls.Add(volumeSlider);
 		Controls.Add(statusLabel);
 		Controls.Add(shuffleCheckBox);
@@ -161,8 +164,8 @@ public class MainForm : Form {
 		musicPlayer = new MusicPlayer();
 		musicPlayer.setOnPlaybackStopped(onPlaybackStopped);
 		setVolumeBasedOnSliderValue();
-		loadPlaylistByIdx(0);
-		playNextSong();
+		//loadPlaylistByIdx(0);
+		//playNextSong();
 
 		updateStatusLabel();
 
@@ -228,22 +231,23 @@ public class MainForm : Form {
 			volumeSlider.Value -= volumeHotkeyChange;
 	}
 
-	//Utility functions
-	private void updateStatusLabel() {
-		if (musicPlayer.isPlaying()) {
-			statusLabel.Text = "Now Playing: " + Path.GetFileNameWithoutExtension(currentSongFilename);
-		}
-		else {
-			statusLabel.Text = "Now Playing: Paused";
+	//Playlist functions
+
+	//Populate a combo box from a given table, assumes the table is a category
+	void populateComboBox(LuaTable table, ComboBox comboBox) {
+		for (int q = 1; q <= getTableSize(table); q++) {
+			LuaTable innerTable = table[q] as LuaTable;
+			comboBox.Items.Add(innerTable["name"]);
 		}
 	}
-	private void loadPlaylistByFilename(string filename) {
-		//Take the ordered list and shuffle it
-		List<string> orderedList = new List<string>();
-		orderedList.AddRange(state.DoFile(filename)[0] as string[]);
 
+	//This function hard assumes that the combo boxes lead to a playlist
+	void loadPlaylistFromComboBoxes() {
+		LuaFunction playlistFunc = getCurrentlySelectedPlaylistTable()["playlistFunc"] as LuaFunction;
+		List<string> orderedList = new List<string>();
+		orderedList.AddRange(playlistFunc.Call()[0] as string[]);
+		Console.WriteLine(orderedList.Count);
 		playlist = new string[orderedList.Count];
-		currentPlaylistFile = filename;
 
 		for (int q = 0; q < playlist.Length; q++) {
 			int n;
@@ -255,11 +259,32 @@ public class MainForm : Form {
 			orderedList.RemoveAt(n);
 		}
 		playlistCounter = -1;
+		playNextSong();
+	}
+
+	//Utility functions
+
+	LuaFunction tableSizeFunction = null;
+	int getTableSize(LuaTable table) {
+		//On first run init the table size function
+		if (tableSizeFunction == null) {
+			tableSizeFunction = luaState.DoString("return function(tab) return #tab end")[0] as LuaFunction;
+		}
+		return (int)(Int64)tableSizeFunction.Call(table)[0];
+	}
+
+	private void updateStatusLabel() {
+		if (musicPlayer.isPlaying()) {
+			statusLabel.Text = "Now Playing: " + Path.GetFileNameWithoutExtension(currentSongFilename);
+		}
+		else {
+			statusLabel.Text = "Now Playing: Paused";
+		}
 	}
 	private void playNextSong() {
 		playlistCounter++;
 		if (playlistCounter > playlist.Length - 1) {
-			loadPlaylistByFilename(currentPlaylistFile);
+			loadPlaylistFromComboBoxes();
 			playlistCounter++;
 		}
 		//Weird bit to handle the fact that the very first song does not get stopped at all
@@ -272,11 +297,6 @@ public class MainForm : Form {
 
 	private string playlistNameToFilename(string name) {
 		return playlistFolder + name + ".lua";
-	}
-	private void loadPlaylistByIdx(int idx) {
-		//Get the name and then just load by name
-		playlistComboBox.SelectedIndex = idx;
-		loadPlaylistByFilename(playlistNameToFilename(playlistComboBox.Items[idx].ToString()));
 	}
 
 	//Button Events
@@ -339,9 +359,45 @@ public class MainForm : Form {
 		weStoppedTheSong = false;
 	}
 	//ComboBox events
-	private void onPlaylistComboBoxSelectionChanged(object sender, EventArgs eventArgs) {
-		loadPlaylistByFilename(playlistNameToFilename(playlistComboBox.SelectedItem.ToString()));
-		playNextSong();
+	private void playlistComboxBoxSelectionId0(object sender, EventArgs eventArgs) {
+		playlistComboBoxSelectionChanged(sender as ComboBox, 0);
+	}
+	private void playlistComboxBoxSelectionId1(object sender, EventArgs eventArgs) {
+		playlistComboBoxSelectionChanged(sender as ComboBox, 1);
+	}
+	private void playlistComboxBoxSelectionId2(object sender, EventArgs eventArgs) {
+		playlistComboBoxSelectionChanged(sender as ComboBox, 2);
+	}
+	private void playlistComboBoxSelectionChanged(ComboBox comboBox, int idx) {
+		LuaTable baseTable = getCurrentlySelectedPlaylistTable();
+		//Clear the proceeding combo boxes
+		for (int q = idx + 1; q < playlistComboBoxes.Length; q++) {
+			playlistComboBoxes[q].Items.Clear();
+		}
+		//If this isn't the last one, regen the entries of the next one
+		if (idx < playlistComboBoxes.Length - 1 && (bool)baseTable["isCategory"]) {
+			populateComboBox(baseTable, playlistComboBoxes[idx + 1]);
+		} //If this is a playlist
+		else if (!(bool)baseTable["isCategory"]) {
+			loadPlaylistFromComboBoxes();
+			Console.WriteLine("HERE");
+		}
+		Console.WriteLine(getCurrentlySelectedPlaylistTable()["name"]);
+
+	}
+
+	private LuaTable getCurrentlySelectedPlaylistTable() {
+		LuaTable retTable = playlistTable;
+		for (int q = 0; q < playlistComboBoxes.Length; q++) {
+			ComboBox comboBox = playlistComboBoxes[q];
+			if (comboBox.SelectedIndex >= 0) {
+				retTable = retTable[comboBox.SelectedIndex + 1] as LuaTable;
+			}
+			else {
+				break;
+			}
+		}
+		return retTable;
 	}
 
 	private void onVolumeSliderValueChanged(object sender, EventArgs eventArgs) {
