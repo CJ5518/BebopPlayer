@@ -70,14 +70,14 @@ public class MainForm : Form {
 		//Set up lua state
 		luaState = new Lua();
 		luaState.LoadCLRPackage();
-		
+
 		//Things for this window
 		this.Size = new Size(600, 175);
-		this.Text = "Bebop Music Player v3.3.2";
+		this.Text = "Bebop Music Player v3.4.0";
 		this.Icon = BebopPlayerV3.Properties.Resources.Icon;
-		
+
 		BackColor = Color.FromArgb(171, 171, 171);
-		
+
 		//Buttons and other controls
 
 		font = new Font(new FontFamily(FontName), FontSize);
@@ -326,10 +326,10 @@ public class MainForm : Form {
 			cancellationToken.Cancel();
 			cancellationToken = new CancellationTokenSource();
 			Task.Delay(deleteButtonDelayMillis).ContinueWith(t => resetDeleteButtonState(cancellationToken));
-			
+
 		}
 		else { //If we already clicked once
-			//Make sure the song hasn't changed
+			   //Make sure the song hasn't changed
 			if (fileToDelete == currentSongFilename) {
 				//Delete the file
 				if (File.Exists(fileToDelete))
@@ -369,11 +369,13 @@ public class MainForm : Form {
 		playlistComboBoxSelectionChanged(sender as ComboBox, 2);
 	}
 	private void playlistComboBoxSelectionChanged(ComboBox comboBox, int idx) {
-		LuaTable baseTable = getCurrentlySelectedPlaylistTable();
 		//Clear the proceeding combo boxes
 		for (int q = idx + 1; q < playlistComboBoxes.Length; q++) {
 			playlistComboBoxes[q].Items.Clear();
+			playlistComboBoxes[q].SelectedIndex = -1;
+			playlistComboBoxes[q].Text = "";
 		}
+		LuaTable baseTable = getCurrentlySelectedPlaylistTable();
 		//If this isn't the last one, regen the entries of the next one
 		if (idx < playlistComboBoxes.Length - 1 && (bool)baseTable["isCategory"]) {
 			populateComboBox(baseTable, playlistComboBoxes[idx + 1]);
@@ -414,7 +416,7 @@ public class MainForm : Form {
 	public static void Main(string[] args) {
 		Application.EnableVisualStyles();
 		Application.Run(new MainForm());
-		
+
 	}
 
 #if DEBUG

@@ -8,10 +8,11 @@ A music player that plays locally downloaded music files via playlists.
 Only works on Windows.
 
 Music is played via locally downloaded audio files, which are loaded into the program via playlists.
-The playlists are Lua files that return an array of strings, those strings being the absolute file paths to your music files.
-All of the current playlists are just Directory.GetFiles() over some directories on my computer, you'll have to make your own playlists to get any use out of this.
+The playlists are loaded from a lua file in the playlists folder called main.lua.
+The file basically returns a list of categories which can contain functions that must return arrays of absoulute file paths to audio files. For the specifics on this functionality please see the file itself.
+You can only go two categories deep due to the number of combo boxes being three. 
 
-All of the lua files are run via [NLua](https://github.com/NLua/NLua) and have no sandboxing of any kind, so feel free to get crazy with them.
+The lua file is run via [NLua](https://github.com/NLua/NLua) and has no sandboxing of any kind, so feel free to get crazy with it.
 
 ### Hotkeys:
 
