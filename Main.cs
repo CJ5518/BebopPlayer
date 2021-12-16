@@ -106,7 +106,7 @@ public class MainForm : Form {
 		//Set up the main combo box
 		playlistTable = luaState.DoFile(playlistFolder + "main.lua")[0] as LuaTable;
 		populateComboBox(playlistTable, playlistComboBoxes[0]);
-
+		
 		//Volume slider
 		volumeSlider = new TrackBar();
 		volumeSlider.Location = new Point(0, BebopButton.ButtonSize);
@@ -259,7 +259,6 @@ public class MainForm : Form {
 			orderedList.RemoveAt(n);
 		}
 		playlistCounter = -1;
-		playNextSong();
 	}
 
 	//Utility functions
@@ -282,8 +281,10 @@ public class MainForm : Form {
 		}
 	}
 	private void playNextSong() {
+		Console.WriteLine("Call to playNextSong");
 		playlistCounter++;
 		if (playlistCounter > playlist.Length - 1) {
+			Console.WriteLine("playlistCount is grater than length-1");
 			loadPlaylistFromComboBoxes();
 			playlistCounter++;
 		}
@@ -382,10 +383,8 @@ public class MainForm : Form {
 		} //If this is a playlist
 		else if (!(bool)baseTable["isCategory"]) {
 			loadPlaylistFromComboBoxes();
-			Console.WriteLine("HERE");
+			playNextSong();
 		}
-		Console.WriteLine(getCurrentlySelectedPlaylistTable()["name"]);
-
 	}
 
 	private LuaTable getCurrentlySelectedPlaylistTable() {
