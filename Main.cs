@@ -106,7 +106,8 @@ public class MainForm : Form {
 		//Set up the main combo box
 		playlistTable = luaState.DoFile(playlistFolder + "main.lua")[0] as LuaTable;
 		populateComboBox(playlistTable, playlistComboBoxes[0]);
-		
+		playlistComboBoxes[0].Items.Add("From files");
+
 		//Volume slider
 		volumeSlider = new TrackBar();
 		volumeSlider.Location = new Point(0, BebopButton.ButtonSize);
@@ -243,6 +244,9 @@ public class MainForm : Form {
 
 	//This function hard assumes that the combo boxes lead to a playlist
 	void loadPlaylistFromComboBoxes() {
+		if ((string)playlistComboBoxes[0].SelectedItem == "From files") {
+			return;
+		}
 		LuaFunction playlistFunc = getCurrentlySelectedPlaylistTable()["playlistFunc"] as LuaFunction;
 		List<string> orderedList = new List<string>();
 		orderedList.AddRange(playlistFunc.Call()[0] as string[]);
@@ -375,6 +379,31 @@ public class MainForm : Form {
 			playlistComboBoxes[q].Items.Clear();
 			playlistComboBoxes[q].SelectedIndex = -1;
 			playlistComboBoxes[q].Text = "";
+		}
+		if ((string)playlistComboBoxes[0].SelectedItem == "From files") {
+			OpenFileDialog fileDialog = new OpenFileDialog();
+			fileDialog.CheckFileExists = true;
+			fileDialog.Multiselect = true;
+			fileDialog.ShowDialog();
+
+			//WARNING: Ultra-mega repeated code below that needs to be fixed
+
+			List<string> orderedList = new List<string>();
+			orderedList.AddRange(fileDialog.FileNames);
+			playlist = new string[orderedList.Count];
+
+			for (int q = 0; q < playlist.Length; q++) {
+				int n;
+				if (shuffleCheckBox.Checked)
+					n = rand.Next(orderedList.Count);
+				else
+					n = 0;
+				playlist[q] = orderedList[n];
+				orderedList.RemoveAt(n);
+			}
+			playlistCounter = -1;
+			playNextSong();
+			return;
 		}
 		LuaTable baseTable = getCurrentlySelectedPlaylistTable();
 		//If this isn't the last one, regen the entries of the next one
