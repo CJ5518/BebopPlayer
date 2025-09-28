@@ -55,6 +55,8 @@ public class MainForm : Form {
 	//The currently playing song
 	int playlistCounter = -1;
 	private String[] playlist;
+	List<String> fileDialogSelection;
+	
 	//Playlist MUST end in a slash
 #if DEBUG
 	const string playlistFolder = "C:\\Users\\carso\\Documents\\ProgrammingProjects\\C#\\BebopPlayerV3\\playlists\\";
@@ -178,7 +180,7 @@ public class MainForm : Form {
 		skipHandler.Register();
 
 		volumeUpHandler = new KeyHandler(Keys.F11, this);
-		volumeUpHandler.Register();
+		//volumeUpHandler.Register();
 
 		volumeDownHandler = new KeyHandler(Keys.F10, this);
 		volumeDownHandler.Register();
@@ -243,16 +245,30 @@ public class MainForm : Form {
 	}
 
 	//This function hard assumes that the combo boxes lead to a playlist
-	void loadPlaylistFromComboBoxes() {
-		if ((string)playlistComboBoxes[0].SelectedItem == "From files") {
-			return;
-		}
-		LuaFunction playlistFunc = getCurrentlySelectedPlaylistTable()["playlistFunc"] as LuaFunction;
+	void loadPlaylistFromComboBoxes(bool replaying = false) {
 		List<string> orderedList = new List<string>();
-		orderedList.AddRange(playlistFunc.Call()[0] as string[]);
-		Console.WriteLine(orderedList.Count);
-		playlist = new string[orderedList.Count];
+		if ((string)playlistComboBoxes[0].SelectedItem == "From files") {
+			if (!replaying) {
+				OpenFileDialog fileDialog = new OpenFileDialog();
+				fileDialog.CheckFileExists = true;
+				fileDialog.Multiselect = true;
+				fileDialog.ShowDialog();
 
+				fileDialogSelection = new List<string>();
+				orderedList.AddRange(fileDialog.FileNames);
+				fileDialogSelection.AddRange(fileDialog.FileNames);
+			} else {
+				orderedList = new List<string>(fileDialogSelection);
+			}
+
+			playlist = new string[orderedList.Count];
+		} else {
+			LuaFunction playlistFunc = getCurrentlySelectedPlaylistTable()["playlistFunc"] as LuaFunction;
+			orderedList.AddRange(playlistFunc.Call()[0] as string[]);
+			Console.WriteLine(orderedList.Count);
+			playlist = new string[orderedList.Count];
+		}
+		Console.WriteLine("playlist Length is " + playlist.Length);
 		for (int q = 0; q < playlist.Length; q++) {
 			int n;
 			if (shuffleCheckBox.Checked)
@@ -289,7 +305,7 @@ public class MainForm : Form {
 		playlistCounter++;
 		if (playlistCounter > playlist.Length - 1) {
 			Console.WriteLine("playlistCount is grater than length-1");
-			loadPlaylistFromComboBoxes();
+			loadPlaylistFromComboBoxes(true);
 			playlistCounter++;
 		}
 		//Weird bit to handle the fact that the very first song does not get stopped at all
@@ -380,28 +396,9 @@ public class MainForm : Form {
 			playlistComboBoxes[q].SelectedIndex = -1;
 			playlistComboBoxes[q].Text = "";
 		}
+		//If it's from files then don't bother doing anything with Lua
 		if ((string)playlistComboBoxes[0].SelectedItem == "From files") {
-			OpenFileDialog fileDialog = new OpenFileDialog();
-			fileDialog.CheckFileExists = true;
-			fileDialog.Multiselect = true;
-			fileDialog.ShowDialog();
-
-			//WARNING: Ultra-mega repeated code below that needs to be fixed
-
-			List<string> orderedList = new List<string>();
-			orderedList.AddRange(fileDialog.FileNames);
-			playlist = new string[orderedList.Count];
-
-			for (int q = 0; q < playlist.Length; q++) {
-				int n;
-				if (shuffleCheckBox.Checked)
-					n = rand.Next(orderedList.Count);
-				else
-					n = 0;
-				playlist[q] = orderedList[n];
-				orderedList.RemoveAt(n);
-			}
-			playlistCounter = -1;
+			loadPlaylistFromComboBoxes();
 			playNextSong();
 			return;
 		}
@@ -412,6 +409,13 @@ public class MainForm : Form {
 		} //If this is a playlist
 		else if (!(bool)baseTable["isCategory"]) {
 			loadPlaylistFromComboBoxes();
+
+
+/*
+ * So where I'm at right now is that the from files thing has a bunch of repeated code, gonna try to cut down on that
+ * and in doing so combine the two things, such that it won't have weird bugs
+ * 
+ */
 			playNextSong();
 		}
 	}

@@ -69,12 +69,10 @@ local function findTableByName(tab, name)
 		end
 	end
 end
-return playlistTable;
---[[
 
 local tatsuTable = findTableByName(playlistTable, "Tatsuro Yamashita");
 for folder in luanet.each(Directory.GetDirectories("F:/Music/Tatsuro Yamashita/Albums")) do
 	tatsuTable[#tatsuTable+1] = {name = Path.GetFileName(folder), isCategory = false, playlistFunc = regDirectory(folder, "*.mp3", false)}
 end
 
-return playlistTable;--]]
+return playlistTable;
