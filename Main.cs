@@ -13,11 +13,15 @@ using NAudio.Wave.SampleProviders;
 
 using NLua;
 
+
+
 public class MainForm : Form {
 	public const int WM_HOTKEY_MSG_ID = 0x0312;
 	//Font settings
 	private const int FontSize = 11;
 	private const String FontName = "Segoe UI";
+
+	private const string version = "3.4.1";
 
 	//The number of milliseconds you have to double click the delete button
 	const int deleteButtonDelayMillis = 250;
@@ -75,7 +79,7 @@ public class MainForm : Form {
 
 		//Things for this window
 		this.Size = new Size(600, 175);
-		this.Text = "Bebop Music Player v3.4.0";
+		this.Text = "Bebop Music Player v" + version;
 		this.Icon = BebopPlayerV3.Properties.Resources.Icon;
 
 		BackColor = Color.FromArgb(171, 171, 171);
